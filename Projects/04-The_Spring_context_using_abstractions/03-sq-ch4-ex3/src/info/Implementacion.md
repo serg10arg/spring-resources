@@ -1,179 +1,134 @@
-Este conjunto de clases implementa un sistema para gestionar y notificar comentarios, siguiendo principios fundamentales de diseño como **separación de responsabilidades**, **modularidad** e **inyección de dependencias**. Analizaremos cómo estas clases trabajan en conjunto y el orden lógico para implementarlas, asegurando un sistema escalable y mantenible.
+### Análisis de las Clases y su Integración
+
+El programa sigue un diseño modular utilizando el framework **Spring** para lograr una funcionalidad principal: gestionar comentarios y enviar notificaciones sobre ellos. Analicemos cómo se integran las clases y el flujo general, siguiendo principios de diseño como separación de responsabilidades, modularidad e inyección de dependencias.
 
 ---
 
-### **1. Clase `Comment` (Modelo de datos)**
+### **Clases Principales y su Rol**
 
-#### Rol:
-- Representa los datos básicos de un comentario: autor y texto.
-
-#### Contribución:
-- Sirve como contenedor de datos que se procesa en el sistema.
-- Esencial para encapsular los datos, asegurando que solo se acceda mediante métodos públicos (`getters` y `setters`).
-
-#### Analogía:
-Es como un formulario de papel donde el autor escribe su nombre y un mensaje.
-
-#### Orden de implementación:
-- Es el punto de partida, ya que otros componentes dependen de este modelo para realizar operaciones.
+1. **`ProjectConfiguration`** (Configuración del contexto de Spring)
+    - **Descripción**: Es una clase de configuración de Spring anotada con `@Configuration` y `@ComponentScan`. Su propósito es indicar a Spring dónde buscar componentes (`basePackages`).
+    - **Función**: Define el contexto de la aplicación, escanea paquetes específicos (`proxies`, `services`, `repositories`) y registra los componentes que usará Spring.
+    - **Relación**: Permite la detección automática de componentes mediante la anotación `@Component` en las clases relevantes.
 
 ---
 
-### **2. Interfaz `CommentRepository`**
-
-#### Rol:
-- Define un contrato para almacenar comentarios.
-
-#### Contribución:
-- Abstrae la lógica de almacenamiento, permitiendo que el código cliente no dependa de una implementación específica.
-
-#### Ejemplo práctico:
-Una base de datos puede ser reemplazada por un almacenamiento en memoria sin cambiar la lógica de negocio.
-
-#### Orden de implementación:
-- Después de `Comment`, ya que define cómo manejar los datos representados por esta clase.
+2. **`Main`** (Punto de entrada)
+    - **Descripción**: Es la clase principal que inicia la aplicación.
+    - **Función**:
+        - Crea un contexto de Spring (`AnnotationConfigApplicationContext`) basado en la configuración proporcionada por `ProjectConfiguration`.
+        - Crea un comentario (`Comment`), lo configura con autor y texto, y lo pasa al servicio para su procesamiento.
+    - **Relación**: Interactúa directamente con el contexto de Spring para obtener el bean de `CommentService` e invocar su método `publishComment`.
 
 ---
 
-### **3. Clase `DBCommentRepository` (Implementación del repositorio)**
-
-#### Rol:
-- Implementa la interfaz `CommentRepository` para almacenar comentarios en una base de datos (simulado).
-
-#### Contribución:
-- Encapsula la lógica de almacenamiento, manteniéndola separada de otras capas del sistema.
-- **Modularidad:** facilita cambiar la implementación de almacenamiento sin afectar al resto del sistema.
-
-#### Analogía:
-Es como un archivador donde se guardan los formularios de comentarios.
-
-#### Orden de implementación:
-- Después de la interfaz `CommentRepository`, ya que la implementación depende del contrato definido por esta.
+3. **`Comment`** (Modelo de Datos)
+    - **Descripción**: Representa un comentario con atributos como `author` y `text`.
+    - **Función**:
+        - Actúa como una clase de modelo para encapsular los datos de un comentario.
+        - Sirve como un contenedor que se pasa entre las capas del sistema.
+    - **Relación**: Es utilizado por las capas de servicio, repositorio y proxy.
 
 ---
 
-### **4. Interfaz `CommentNotificationProxy`**
-
-#### Rol:
-- Define un contrato para enviar notificaciones sobre comentarios.
-
-#### Contribución:
-- Abstrae el proceso de notificación, permitiendo múltiples métodos de notificación (por ejemplo, correo electrónico o SMS) sin afectar otras partes del sistema.
-
-#### Orden de implementación:
-- Después de `Comment`, ya que el envío de notificaciones requiere datos de los comentarios.
+4. **`CommentRepository`** (Interfaz del Repositorio)
+    - **Descripción**: Define el contrato para almacenar comentarios.
+    - **Función**: Permite la abstracción de la implementación específica de almacenamiento.
+    - **Relación**: Es implementado por `DBCommentRepository`.
 
 ---
 
-### **5. Clase `EmailCommentNotificationProxy` (Implementación del proxy)**
-
-#### Rol:
-- Implementa el envío de notificaciones por correo electrónico (simulado con un mensaje en la consola).
-
-#### Contribución:
-- Encapsula la lógica de notificación, manteniéndola separada de otras capas.
-- Facilita agregar nuevos métodos de notificación en el futuro.
-
-#### Analogía:
-Es como un servicio postal que envía un aviso de recepción de comentarios.
-
-#### Orden de implementación:
-- Después de la interfaz `CommentNotificationProxy`, ya que depende del contrato definido.
+5. **`DBCommentRepository`** (Implementación del Repositorio)
+    - **Descripción**: Implementa la interfaz `CommentRepository`.
+    - **Función**:
+        - Gestiona el almacenamiento del comentario, simulando una base de datos con un mensaje en consola.
+    - **Relación**: Es inyectado en `CommentService` mediante `@Autowired`.
 
 ---
 
-### **6. Clase `CommentService` (Capa de servicio)**
-
-#### Rol:
-- Coordina las operaciones principales:
-    1. Almacenar un comentario.
-    2. Notificar sobre el comentario.
-
-#### Contribución:
-- **Separación de responsabilidades:**
-    - El servicio se encarga únicamente de orquestar las operaciones, delegando tareas específicas al repositorio y al proxy.
-- **Inyección de dependencias:**
-    - Utiliza `@Autowired` para recibir `CommentRepository` y `CommentNotificationProxy`, promoviendo el desacoplamiento.
-
-#### Flujo del método `publishComment`:
-1. Almacena el comentario llamando a `commentRepository.storeComment`.
-2. Envía una notificación utilizando `commentNotificationProxy.sendComment`.
-
-#### Analogía:
-Es como un gerente que asegura que los comentarios se archiven correctamente y se notifique a los interesados.
-
-#### Orden de implementación:
-- Después de definir el repositorio y el proxy, ya que el servicio depende de ellos.
+6. **`CommentNotificationProxy`** (Interfaz de Proxy de Notificación)
+    - **Descripción**: Define el contrato para enviar notificaciones sobre comentarios.
+    - **Función**: Permite la abstracción de la implementación específica de las notificaciones.
+    - **Relación**: Es implementado por `EmailCommentNotificationProxy`.
 
 ---
 
-### **7. Clase `ProjectConfiguration` (Configuración de Spring)**
-
-#### Rol:
-- Configura el contexto de Spring, habilitando la detección automática de componentes (`@ComponentScan`).
-
-#### Contribución:
-- Facilita la gestión de dependencias y la configuración del sistema sin necesidad de código manual.
-
-#### Orden de implementación:
-- Antes de `Main`, ya que el contexto de Spring debe estar configurado para ejecutar la aplicación.
+7. **`EmailCommentNotificationProxy`** (Implementación del Proxy)
+    - **Descripción**: Implementa la interfaz `CommentNotificationProxy`.
+    - **Función**:
+        - Gestiona el envío de notificaciones, simulando este proceso con un mensaje en consola.
+    - **Relación**: Es inyectado en `CommentService` mediante `@Autowired`.
 
 ---
 
-### **8. Clase `Main` (Punto de entrada)**
+8. **`CommentService`** (Capa de Servicio)
+    - **Descripción**: Contiene la lógica principal para procesar comentarios.
+    - **Función**:
+        - Publica comentarios invocando métodos del repositorio (`storeComment`) y del proxy de notificación (`sendComment`).
+    - **Relación**:
+        - Depende de `CommentRepository` y `CommentNotificationProxy`, los cuales son inyectados automáticamente mediante `@Autowired`.
 
-#### Rol:
-- Inicia el contexto de Spring y el flujo del programa.
+---
 
-#### Flujo de ejecución:
-1. Configura el contexto con `ProjectConfiguration`.
-2. Crea un objeto `Comment` y establece sus datos.
-3. Recupera el bean `CommentService` del contexto.
-4. Llama al método `publishComment` para ejecutar el flujo completo.
+### **Orden Lógico de Implementación**
 
-#### Contribución:
-- Coordina el inicio del sistema, asegurando que todas las dependencias estén correctamente gestionadas por Spring.
+1. **Modelo (`Comment`)**:
+    - Define la estructura básica de los datos.
+    - Es el núcleo del flujo de datos en el sistema.
 
-#### Orden de implementación:
-- Es el último paso, ya que depende de que todos los componentes estén configurados.
+2. **Interfaces (`CommentRepository` y `CommentNotificationProxy`)**:
+    - Establecen contratos para almacenamiento y notificación, promoviendo la abstracción y desacoplamiento.
+
+3. **Implementaciones (`DBCommentRepository` y `EmailCommentNotificationProxy`)**:
+    - Proveen la lógica específica para las operaciones definidas en las interfaces.
+
+4. **Capa de Servicio (`CommentService`)**:
+    - Combina las funcionalidades de almacenamiento y notificación.
+    - Es el punto central del procesamiento de comentarios.
+
+5. **Configuración (`ProjectConfiguration`)**:
+    - Configura el contexto de Spring para habilitar la inyección de dependencias y el escaneo de componentes.
+
+6. **Punto de Entrada (`Main`)**:
+    - Inicializa la aplicación y demuestra su funcionalidad.
 
 ---
 
 ### **Flujo General del Sistema**
 
-1. **Inicio (`Main`):**
-    - Configura el contexto y comienza el flujo.
+1. **Inicio de la Aplicación**:
+    - `Main` crea el contexto de Spring basado en `ProjectConfiguration`.
 
-2. **Creación de un comentario (`Comment`):**
-    - El comentario se crea y se establece su contenido.
+2. **Creación del Comentario**:
+    - Se instancia un objeto `Comment` con datos proporcionados por el usuario.
 
-3. **Publicación del comentario (`CommentService`):**
-    - El servicio coordina las siguientes operaciones:
-        - **Almacenar el comentario (`DBCommentRepository`):** Simula guardar el comentario.
-        - **Notificar el comentario (`EmailCommentNotificationProxy`):** Simula enviar una notificación.
+3. **Obtención de `CommentService`**:
+    - Spring inyecta automáticamente las dependencias necesarias (`CommentRepository` y `CommentNotificationProxy`) en `CommentService`.
 
-4. **Resultado:**
-    - Se imprime un mensaje en la consola indicando que el comentario se ha almacenado y notificado.
+4. **Publicación del Comentario**:
+    - `CommentService` llama a:
+        - `storeComment` de `DBCommentRepository` para almacenar el comentario.
+        - `sendComment` de `EmailCommentNotificationProxy` para enviar una notificación.
 
 ---
 
-### **Principios de Diseño Respetados**
+### **Principios de Diseño Aplicados**
 
-1. **Separación de responsabilidades:**
-    - Cada clase tiene una única responsabilidad clara.
-    - Ejemplo: `DBCommentRepository` solo almacena comentarios; no se ocupa de notificaciones.
+1. **Separación de Responsabilidades**:
+    - Cada clase tiene una única responsabilidad (almacenar datos, enviar notificaciones, manejar lógica de negocio).
 
-2. **Modularidad:**
-    - Las clases están desacopladas gracias al uso de interfaces (`CommentRepository`, `CommentNotificationProxy`).
+2. **Inyección de Dependencias**:
+    - Las dependencias (`CommentRepository` y `CommentNotificationProxy`) se inyectan en `CommentService` automáticamente, lo que permite un código más limpio y desacoplado.
 
-3. **Inyección de dependencias:**
-    - Spring gestiona automáticamente las dependencias, facilitando el reemplazo o actualización de componentes.
+3. **Modularidad**:
+    - Las capas del sistema están bien definidas (modelo, repositorio, servicio, proxy).
 
-4. **Escalabilidad y mantenibilidad:**
-    - Es fácil agregar nuevos métodos de notificación o almacenamiento sin afectar el código existente.
+4. **Escalabilidad y Mantenibilidad**:
+    - Las interfaces permiten cambiar las implementaciones sin afectar otras partes del sistema.
+    - Por ejemplo, se podría agregar un repositorio para almacenar comentarios en un archivo o una base de datos diferente sin modificar `CommentService`.
 
 ---
 
 ### **Conclusión**
 
-Este sistema es un ejemplo de un diseño bien estructurado y modular, donde cada componente desempeña un rol claro y bien definido. La integración entre las clases se logra mediante la inyección de dependencias, promoviendo el desacoplamiento y la escalabilidad. Este enfoque asegura que el sistema sea mantenible y flexible frente a cambios futuros.
+Este diseño modular y basado en Spring asegura que el sistema sea **escalable**, **mantenible** y **flexible**. Las responsabilidades están claramente definidas y desacopladas, lo que facilita futuras expansiones o modificaciones.
